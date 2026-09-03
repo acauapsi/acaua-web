@@ -1,0 +1,295 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Acauã — Design Tokens (White Text in Dark Mode)
+   Background: Dark Petrol / Forest Teal (#163232 / #112424)
+   Text: Pure White (#FFFFFF)
+   ============================================================ */
+:root {
+  --bg-primary:    #f5f0e8;
+  --text-primary:  #163232;
+  --text-secondary:#2d5555;
+  --bg-panel:      rgba(255, 255, 255, 0.95);
+  --border-panel:  rgba(45, 112, 112, 0.18);
+  --bg-input:      #ffffff;
+  --border-input:  rgba(22, 50, 50, 0.15);
+  --scroll-track:  #f0ebe0;
+  --scroll-thumb:  #c5dede;
+  --accent:        #2d7070;
+  --accent-light:  #4d9696;
+}
+
+.dark {
+  --bg-primary:    #163232;
+  --text-primary:  #ffffff;
+  --text-secondary:#f1f5f9;
+  --bg-panel:      #112424;
+  --border-panel:  rgba(77, 150, 150, 0.25);
+  --bg-input:      rgba(9, 20, 20, 0.9);
+  --border-input:  rgba(255, 255, 255, 0.12);
+  --scroll-track:  #112424;
+  --scroll-thumb:  #244848;
+  --accent:        #4d9696;
+  --accent-light:  #72b0b0;
+  color:           #ffffff;
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.bg-primary  { background-color: var(--bg-primary)  !important; }
+.text-primary  { color: var(--text-primary)  !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+
+/* Custom Scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--scroll-track); }
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 9999px;
+  border: 1px solid var(--border-panel);
+}
+::-webkit-scrollbar-thumb:hover { background: #4d9696; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #72b0b0; }
+
+/* ── Animations (Smooth Fade, Zero Bounces/Jumps) ── */
+@keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut  { from { opacity: 1; } to { opacity: 0; } }
+@keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.animate-fadeIn    { animation: fadeIn   0.2s ease-out forwards; }
+.animate-slideUp   { animation: fadeIn   0.2s ease-out forwards; }
+.animate-scaleIn   { animation: fadeIn   0.2s ease-out forwards; }
+.animate-scaleUp   { animation: fadeIn   0.2s ease-out forwards; }
+.animate-fadeOut   { animation: fadeOut  0.2s ease-out forwards; }
+.animate-spin-slow { animation: spinSlow 8s   linear infinite; }
+
+/* ── Glass Panels ── */
+.glass-panel {
+  background: var(--bg-panel);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-panel);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.dark .glass-panel { box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
+
+.glass-panel-teal,
+.glass-panel-gold {
+  background: var(--bg-panel);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(77, 150, 150, 0.25);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.dark .glass-panel-teal,
+.dark .glass-panel-gold {
+  background: #112424;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.65);
+  border-color: rgba(77, 150, 150, 0.25);
+}
+
+/* ── Inputs ── */
+.glass-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  color: var(--text-primary);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-input:focus {
+  border-color: rgba(77, 150, 150, 0.6);
+  box-shadow: 0 0 0 1px rgba(77, 150, 150, 0.5), 0 0 15px rgba(77, 150, 150, 0.15);
+  outline: none;
+}
+.dark .glass-input:focus {
+  border-color: rgba(114, 176, 176, 0.6);
+  box-shadow: 0 0 0 1px rgba(114, 176, 176, 0.5), 0 0 15px rgba(77, 150, 150, 0.2);
+}
+
+/* ── Teal / White Gradient Button (primary CTA) ── */
+.bg-teal-gradient,
+.bg-gold-gradient {
+  background: linear-gradient(135deg, #2d7070 0%, #1a4848 100%);
+  color: #ffffff;
+  border: 1px solid rgba(114, 176, 176, 0.3);
+  transition: all 0.2s ease;
+}
+.bg-teal-gradient:hover,
+.bg-gold-gradient:hover {
+  box-shadow: 0 0 22px rgba(77, 150, 150, 0.4);
+  background: linear-gradient(135deg, #3d8888 0%, #245858 100%);
+}
+.bg-teal-gradient:active,
+.bg-gold-gradient:active { transform: translateY(0); }
+
+/* ── Borders & Glow ── */
+.border-teal-glow,
+.border-gold-glow {
+  border: 1px solid rgba(77, 150, 150, 0.3) !important;
+  box-shadow: 0 4px 20px rgba(77, 150, 150, 0.08);
+}
+.dark .border-teal-glow,
+.dark .border-gold-glow {
+  border: 1px solid rgba(114, 176, 176, 0.25) !important;
+  box-shadow: 0 4px 20px rgba(77, 150, 150, 0.12);
+}
+.teal-glow,
+.gold-glow {
+  box-shadow: 0 0 25px rgba(77, 150, 150, 0.15);
+}
+.dark .teal-glow,
+.dark .gold-glow {
+  box-shadow: 0 0 25px rgba(114, 176, 176, 0.2);
+}
+
+/* ── Cards Hover ── */
+.hover-card-premium { transition: all 0.2s ease; }
+.hover-card-premium:hover {
+  border-color: rgba(77, 150, 150, 0.45);
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.25);
+}
+.dark .hover-card-premium:hover {
+  border-color: rgba(114, 176, 176, 0.35);
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.7), 0 0 20px rgba(77, 150, 150, 0.12);
+}
+
+/* ── Text color overrides (compatibility aliases) ── */
+.text-gold-400, .text-teal-400 { color: #4d9696 !important; }
+.dark .text-gold-400, .dark .text-teal-400 { color: #72b0b0 !important; }
+.text-gold-500, .text-teal-500 { color: #2d7070 !important; }
+.dark .text-gold-500, .dark .text-teal-500 { color: #9dc8c8 !important; }
+.text-gold-550, .text-teal-600 { color: #1e5050 !important; }
+.dark .text-gold-550, .dark .text-teal-600 { color: #ffffff !important; }
+
+/* Calendar */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+/* ==========================================================================
+   UIVERSE.IO — Acauã Edition (Petrol Teal & Pure White)
+   ========================================================================== */
+
+/* Primary Shimmer Button */
+.uiverse-btn-gold {
+  position: relative;
+  background: linear-gradient(135deg, #2d7070 0%, #1a4848 100%);
+  color: #ffffff;
+  font-weight: 800;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid rgba(114, 176, 176, 0.35);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.uiverse-btn-gold::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: rotate(45deg) translateY(-100%);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.uiverse-btn-gold:hover::before { transform: rotate(45deg) translateY(100%); }
+.uiverse-btn-gold:hover {
+  box-shadow: 0 8px 25px rgba(77, 150, 150, 0.35);
+  background: linear-gradient(135deg, #3d8888 0%, #245858 100%);
+  border-color: rgba(168, 213, 213, 0.5);
+}
+.uiverse-btn-gold:active { transform: translateY(0); }
+
+/* Glass Button */
+.uiverse-btn-glass {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(77, 150, 150, 0.25);
+  color: var(--text-primary);
+  font-weight: 700;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+}
+.uiverse-btn-glass:hover {
+  background: rgba(77, 150, 150, 0.12);
+  border-color: rgba(114, 176, 176, 0.5);
+  box-shadow: 0 0 20px rgba(77, 150, 150, 0.2);
+}
+.dark .uiverse-btn-glass {
+  background: #112424;
+  border-color: rgba(77, 150, 150, 0.2);
+}
+.dark .uiverse-btn-glass:hover {
+  background: rgba(77, 150, 150, 0.18);
+  border-color: rgba(114, 176, 176, 0.5);
+  box-shadow: 0 0 22px rgba(77, 150, 150, 0.25);
+}
+
+/* Glowing Card Frame */
+.uiverse-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(45, 112, 112, 0.18);
+  border-radius: 1.25rem;
+  transition: all 0.2s ease;
+}
+.dark .uiverse-card {
+  background: #112424;
+  border-color: rgba(77, 150, 150, 0.25);
+}
+.uiverse-card:hover {
+  border-color: rgba(77, 150, 150, 0.4);
+  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.25);
+}
+.dark .uiverse-card:hover {
+  border-color: rgba(114, 176, 176, 0.35);
+  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.8), 0 0 20px rgba(77, 150, 150, 0.15);
+}
+
+/* ============================================================
+   Acauã — Logo "A" Crisp White Shimmer (Zero Gold)
+   ============================================================ */
+.shiny-text-white,
+.shiny-text-teal {
+  display: inline-block;
+  background-image: linear-gradient(
+    120deg,
+    #ffffff 0%,
+    #ffffff 35%,
+    #c5dede 50%,
+    #ffffff 65%,
+    #ffffff 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shinySweep 3.5s linear infinite;
+  line-height: 1;
+  font-weight: 900;
+}
+
+@keyframes shinySweep {
+  0%   { background-position: 150% center; }
+  100% { background-position: -50% center; }
+}
