@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/db';
-import type { Appointment, Patient, Transaction } from '../services/db';
-import { Calendar, DollarSign, ArrowUpRight, ArrowDownRight, Gift, Activity, TrendingUp, AlertTriangle } from 'lucide-react';
+import type { Appointment, Transaction } from '../services/db';
+import { Calendar, DollarSign, ArrowUpRight, ArrowDownRight, Activity, TrendingUp } from 'lucide-react';
 import { gsapAnimations } from '../utils/gsapAnimations';
 
 interface DashboardProps {
@@ -12,13 +12,11 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onSelectPatient }) => {
   const [todayAppts, setTodayAppts] = useState<Appointment[]>([]);
   const [financeSummary, setFinanceSummary] = useState({ income: 0, expense: 0, net: 0 });
-  const [birthdayPatients, setBirthdayPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Advanced States
   const [financialTrend, setFinancialTrend] = useState<{ label: string; key: string; income: number; expense: number; net: number }[]>([]);
   const [sessionDistribution, setSessionDistribution] = useState({ confirmed: 0, pending: 0, cancelled: 0, absent: 0 });
-  const [packageAlertPatients, setPackageAlertPatients] = useState<Patient[]>([]);
 
   // Chart Interactive Tooltip State
   const [activeBarIdx, setActiveBarIdx] = useState<number | null>(null);
@@ -83,28 +81,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onSelectPatien
         net: income - expense
       });
 
-      // 4. Aniversariantes de hoje
-      const allPatients = await dbService.query<Patient>('SELECT id, name, birth_date, phone FROM patients');
+      // 4. Tendência Financeira (Últimos 6 meses)
       const today = new Date();
-      const todayDay = today.getDate();
-      const todayMonth = today.getMonth() + 1;
-
-      const bdays = allPatients.filter(p => {
-        if (!p.birth_date) return false;
-        const cleanDate = p.birth_date.replace(/\//g, '-');
-        const parts = cleanDate.split('-');
-        if (parts.length === 3) {
-          if (parts[0].length === 4) {
-            return Number(parts[1]) === todayMonth && Number(parts[2]) === todayDay;
-          } else {
-            return Number(parts[1]) === todayMonth && Number(parts[0]) === todayDay;
-          }
-        }
-        return false;
-      });
-      setBirthdayPatients(bdays);
-
-      // 5. Tendência Financeira (Últimos 6 meses)
       const monthsBack: { label: string; key: string; income: number; expense: number; net: number }[] = [];
       const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
       
@@ -152,11 +130,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onSelectPatien
       });
 
       setSessionDistribution({ confirmed, pending, cancelled, absent });
-
-      // 7. Alerta de Pacotes Prestes a Vencer (<= 2 sessões restantes)
-      const pkgAlerts = allPatients.filter(p => p.billing_model === 'PACOTE' && p.sessions_remaining !== undefined && p.sessions_remaining <= 2);
-      setPackageAlertPatients(pkgAlerts);
-
     } catch (err) {
       console.error('Erro ao carregar Dashboard:', err);
     } finally {
@@ -221,78 +194,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onSelectPatien
 
   return (
     <div className="h-full flex flex-col gap-4 overflow-hidden animate-fadeIn">
-      {/* Birthday Alert Notification Banner */}
-      {birthdayPatients.length > 0 && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 rounded-xl">
-              <Gift className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-teal-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                Aniversariantes de Hoje! 🎉
-              </h4>
-              <p className="text-[10px] text-teal-700 dark:text-white mt-0.5 normal-case font-medium leading-relaxed">
-                {birthdayPatients.length === 1 
-                  ? `Hoje é aniversário de ${birthdayPatients[0].name}. Envie uma mensagem carinhosa!` 
-                  : `Hoje é aniversário de ${birthdayPatients.map(p => p.name).join(', ')}. Envie os parabéns!`}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 shrink-0">
-            {birthdayPatients.map(p => {
-              const bdayMsg = `Olá, ${p.name.split(' ')[0]}! Passando para te desejar um feliz aniversário! Muita saúde, paz, felicidades e realizações no seu novo ciclo. Um grande abraço!`;
-              const waLink = `https://web.whatsapp.com/send?phone=${p.phone.replace(/\D/g, '')}&text=${encodeURIComponent(bdayMsg)}`;
-              
-              return (
-                <a
-                  key={p.id}
-                  href={waLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="uiverse-btn-gold text-white font-black text-[9px] uppercase tracking-wider px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md"
-                >
-                  Felicitar {p.name.split(' ')[0]}
-                </a>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Package Alert Banner */}
-      {packageAlertPatients.length > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3.5 shrink-0">
-          <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 rounded-xl shrink-0 mt-0.5">
-            <AlertTriangle className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-[10px] font-black text-teal-900 dark:text-white uppercase tracking-wider">
-              Pacotes Expirando
-            </h4>
-            <p className="text-[9.5px] text-teal-700 dark:text-white mt-0.5 normal-case font-medium mb-2.5">
-              {packageAlertPatients.length === 1
-                ? 'Há 1 paciente com 2 sessões ou menos restantes.'
-                : `Há ${packageAlertPatients.length} pacientes com 2 sessões ou menos restantes.`}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {packageAlertPatients.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => onSelectPatient(p.id)}
-                  className={`uiverse-btn-glass px-3 py-1.5 text-[8.5px] font-black uppercase tracking-wider transition-all ${
-                    p.sessions_remaining === 0
-                      ? 'border-red-500/30 text-red-400 hover:bg-red-500/15'
-                      : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/15'
-                  }`}
-                >
-                  {p.name.split(' ')[0]} — {p.sessions_remaining} {p.sessions_remaining === 1 ? 'sessão' : 'sessões'}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Stats Cards Row — Unified Dark Card Background */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { dbService } from './services/db';
+import { dbService, isTauri } from './services/db';
 import type { ProfessionalConfig } from './services/db';
 import { LockScreen } from './components/LockScreen';
 import { Dashboard } from './components/Dashboard';
@@ -13,7 +13,7 @@ import { Settings } from './components/Settings';
 import { TourGuide } from './components/TourGuide';
 import { Notas } from './components/Notas';
 import { DotField } from './components/DotField';
-import { AcauaLogo } from './components/AcauaLogo';
+import { NotificationMenu } from './components/NotificationMenu';
 import { gsapAnimations } from './utils/gsapAnimations';
 
 import { 
@@ -144,7 +144,7 @@ function App() {
     setSplashMessage('Inicializando cofre de segurança e chaves AES-256...');
     
     const startTime = Date.now();
-    const duration = 6000; // 6 seconds exact duration matching the motion video
+    const duration = isTauri() ? 6000 : 800; // 6s no desktop para sincronizar com motion video, 800ms super rápido na web demo!
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -340,7 +340,12 @@ function App() {
       case 'kanban':
         return <Kanban onSelectPatient={handleSelectPatientFromDashboard} />;
       case 'tarefas':
-        return <DailyTracker />;
+        return (
+          <DailyTracker 
+            onNavigate={handleTabChange} 
+            onSelectPatient={handleSelectPatientFromDashboard} 
+          />
+        );
       case 'agenda':
         return <Agenda />;
       case 'financeiro':
@@ -375,7 +380,7 @@ function App() {
         <div className={`fixed inset-0 z-[999] w-screen h-screen bg-black overflow-hidden select-none flex flex-col justify-end transition-all duration-300 ${isFadingOut ? 'animate-fadeOut' : ''}`}>
           {/* Fullscreen Motion Video */}
           <video
-            src="/vid/motion2.mp4"
+            src={`${import.meta.env.BASE_URL}vid/motion2.mp4`}
             autoPlay
             muted
             playsInline
@@ -495,11 +500,12 @@ function App() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        {/* Logo Header (Top) */}
+        {/* Logo Header (Top) com Central de Notificações */}
         <div className="flex items-center justify-center w-full relative shrink-0">
-          <div className="w-12 h-12 bg-teal-500/20 border border-teal-400/30 rounded-xl flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(77,150,150,0.2)] p-2">
-            <AcauaLogo className="w-8 h-8 text-teal-800 dark:text-white drop-shadow-[0_0_8px_rgba(114,176,176,0.6)]" />
-          </div>
+          <NotificationMenu 
+            onNavigate={handleTabChange}
+            onSelectPatient={handleSelectPatientFromDashboard}
+          />
 
           {/* Mobile close button */}
           {sidebarOpen && (
@@ -664,6 +670,12 @@ function App() {
             >
               <Menu className="h-5 w-5" />
             </button>
+            <div className="lg:hidden flex items-center">
+              <NotificationMenu 
+                onNavigate={handleTabChange}
+                onSelectPatient={handleSelectPatientFromDashboard}
+              />
+            </div>
             <div className="hidden sm:flex items-center gap-2 text-xs font-black text-teal-700 dark:text-white uppercase tracking-widest">
               <span className="font-heading tracking-wider">Acauã</span>
               <ChevronRight className="h-3 w-3 text-teal-500 dark:text-white" />

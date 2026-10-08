@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { dbService } from '../services/db';
+import { dbService, isTauri } from '../services/db';
 import { DotField } from './DotField';
 import { AcauaLogo } from './AcauaLogo';
 import { 
@@ -11,7 +11,7 @@ interface LockScreenProps {
 }
 
 export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState(!isTauri() ? 'acaua2026' : '');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isFirstRun, setIsFirstRun] = useState<boolean | null>(null);
   const [dbExists, setDbExists] = useState(false);
@@ -83,6 +83,10 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
       const cachedTheme = ((localStorage.getItem('acaua_theme') || localStorage.getItem('psi_crm_theme')) as 'dark' | 'light') || 'dark';
       setTheme(cachedTheme);
       toggleTheme(cachedTheme);
+
+      if (!isTauri()) {
+        setPassword('acaua2026');
+      }
     };
     checkDb();
   }, []);
@@ -641,6 +645,18 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
                   autoFocus
                 />
               </div>
+
+              {!isTauri() && (
+                <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-3 text-teal-900 dark:text-cream-200 text-left space-y-1">
+                  <div className="flex items-center gap-1.5 font-black text-[11px] uppercase tracking-wider text-teal-800 dark:text-cream-300">
+                    <Sparkles className="w-3.5 h-3.5 text-teal-500" />
+                    <span>Versão Demonstrativa Online</span>
+                  </div>
+                  <p className="text-[11px] opacity-85 leading-relaxed font-medium">
+                    Senha mestra pré-preenchida (<code className="font-mono bg-teal-500/20 px-1 py-0.5 rounded font-bold">acaua2026</code>) e base clínica simulada pronta. Clique em <strong>Desbloquear Acesso</strong> abaixo para entrar imediatamente!
+                  </p>
+                </div>
+              )}
             </div>
 
             {error && (

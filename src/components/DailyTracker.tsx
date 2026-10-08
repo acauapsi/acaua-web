@@ -7,11 +7,16 @@ import {
   Clock, 
   CheckCircle2, 
   Calendar, 
-  MessageSquare,
-  Sparkles,
-  CheckCircle,
-  Star,
-  AlertTriangle
+  MessageSquare, 
+  Sparkles, 
+  CheckCircle, 
+  Star, 
+  AlertTriangle,
+  ArrowUpRight,
+  User,
+  DollarSign,
+  StickyNote,
+  FileText
 } from 'lucide-react';
 
 interface UnifiedItem {
@@ -29,9 +34,22 @@ interface UnifiedItem {
   patient_id?: number;
 }
 
-export const DailyTracker: React.FC = () => {
+interface TaskReference {
+  target: 'pacientes' | 'financeiro' | 'agenda' | 'notas' | 'documentos';
+  label: string;
+  patientId?: number;
+}
+
+interface DailyTrackerProps {
+  onNavigate?: (tab: string) => void;
+  onSelectPatient?: (patientId: number) => void;
+}
+
+export const DailyTracker: React.FC<DailyTrackerProps> = ({ onNavigate, onSelectPatient }) => {
   const [todayItems, setTodayItems] = useState<UnifiedItem[]>([]);
   const [weekItems, setWeekItems] = useState<UnifiedItem[]>([]);
+  const [patientsList, setPatientsList] = useState<Patient[]>([]);
+  const [linkedEntity, setLinkedEntity] = useState<string>('');
   
   const [taskTitle, setTaskTitle] = useState('');
   const [taskTime, setTaskTime] = useState('10:00');
@@ -159,6 +177,7 @@ export const DailyTracker: React.FC = () => {
           return a.time.localeCompare(b.time);
         });
 
+      setPatientsList(allPatients);
       setTodayItems(todayFiltered);
       setWeekItems(weekFiltered);
     } catch (err) {
@@ -168,16 +187,120 @@ export const DailyTracker: React.FC = () => {
     }
   };
 
+  const resolveItemReference = (item: UnifiedItem, patients: Patient[]): TaskReference | null => {
+    if (item.type === 'APPT') {
+      if (item.patient_id) {
+        return {
+          target: 'pacientes',
+          label: item.patient_name || 'Paciente',
+          patientId: item.patient_id
+        };
+      }
+      return {
+        target: 'agenda',
+        label: 'Agenda'
+      };
+    }
+
+    const titleLower = item.title.toLowerCase();
+
+    // 1. Procura paciente correspondente pelo nome completo ou primeiro nome
+    for (const p of patients) {
+      const fullNameLower = p.name.toLowerCase();
+      const firstNameLower = p.name.split(' ')[0].toLowerCase();
+      
+      if (fullNameLower && titleLower.includes(fullNameLower)) {
+        return {
+          target: 'pacientes',
+          label: p.name.split(' ')[0],
+          patientId: p.id
+        };
+      }
+      if (firstNameLower.length > 2 && titleLower.includes(firstNameLower)) {
+        return {
+          target: 'pacientes',
+          label: p.name.split(' ')[0],
+          patientId: p.id
+        };
+      }
+    }
+
+    // 2. Termos financeiros
+    if (['recibo', 'financeiro', 'pagamento', 'cobrança', 'cobranca', 'faturamento', 'nota fiscal', 'valor', 'reembolso'].some(k => titleLower.includes(k))) {
+      return {
+        target: 'financeiro',
+        label: 'Financeiro'
+      };
+    }
+
+    // 3. Termos de anotações / supervisão / protocolos / estudos
+    if (['nota', 'notas', 'anotação', 'anotacao', 'supervisão', 'supervisao', 'protocolo', 'rascunho', 'estudo', 'leitura', 'livro'].some(k => titleLower.includes(k))) {
+      return {
+        target: 'notas',
+        label: 'Bloco de Notas'
+      };
+    }
+
+    // 4. Termos de agenda / consultas / atendimentos
+    if (['sessão', 'sessao', 'consulta', 'atendimento', 'agenda', 'horário', 'horario', 'agendamento'].some(k => titleLower.includes(k))) {
+      return {
+        target: 'agenda',
+        label: 'Agenda'
+      };
+    }
+
+    // 5. Termos de documentos
+    if (['declaração', 'declaracao', 'atestado', 'laudo', 'relatório', 'relatorio', 'documento', 'termo', 'contrato'].some(k => titleLower.includes(k))) {
+      return {
+        target: 'documentos',
+        label: 'Documentos'
+      };
+    }
+
+    return null;
+  };
+
+  const handleItemClick = (item: UnifiedItem) => {
+    const ref = resolveItemReference(item, patientsList);
+    if (ref) {
+      if (ref.target === 'pacientes' && ref.patientId && onSelectPatient) {
+        onSelectPatient(ref.patientId);
+      } else if (onNavigate) {
+        onNavigate(ref.target);
+      }
+    } else {
+      handleToggleItem(item);
+    }
+  };
+
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!taskTitle.trim()) return;
 
+    let finalTitle = taskTitle.trim();
+    if (linkedEntity) {
+      if (linkedEntity.startsWith('patient:')) {
+        const parts = linkedEntity.split(':');
+        const pName = parts[2];
+        if (pName && !finalTitle.toLowerCase().includes(pName.toLowerCase())) {
+          finalTitle = `${finalTitle} (${pName})`;
+        }
+      } else if (linkedEntity.startsWith('module:')) {
+        const mod = linkedEntity.split(':')[1];
+        const modName = mod === 'financeiro' ? 'Financeiro' : mod === 'notas' ? 'Bloco de Notas' : mod === 'agenda' ? 'Agenda' : 'Documentos';
+        if (!finalTitle.toLowerCase().includes(mod.toLowerCase())) {
+          finalTitle = `${finalTitle} [${modName}]`;
+        }
+      }
+    }
+
     try {
       await dbService.execute(
         'INSERT INTO daily_tasks (title, time, done, date, important) VALUES (?, ?, ?, ?, ?)',
-        [taskTitle.trim(), taskTime, 0, taskDate, taskImportant ? 1 : 0]
+        [finalTitle, taskTime, 0, taskDate, taskImportant ? 1 : 0]
       );
       setTaskTitle('');
+      setLinkedEntity('');
       setTaskImportant(false);
       setShowAddModal(false);
       loadTrackerData();
@@ -393,11 +516,12 @@ export const DailyTracker: React.FC = () => {
             ) : (
               todayItems.map((item) => {
                 const isOverdue = (item.date < todayStr || (item.date === todayStr && item.time < currentHourMin)) && !item.done;
+                const ref = resolveItemReference(item, patientsList);
                 return (
                   <div
                     key={item.uid}
-                    onClick={() => handleToggleItem(item)}
-                    className={`border transition-all rounded-xl p-3.5 flex items-center justify-between shadow-sm hover:shadow-md cursor-pointer select-none ${
+                    onClick={() => handleItemClick(item)}
+                    className={`border transition-all rounded-xl p-3.5 flex items-center justify-between shadow-sm hover:shadow-md cursor-pointer select-none group ${
                       item.done 
                         ? 'bg-[#faf9f6]/30 dark:bg-charcoal-950/20 border-[#e7e4dc]/70 dark:border-[#131317] opacity-40' 
                         : isOverdue
@@ -409,20 +533,27 @@ export const DailyTracker: React.FC = () => {
                               : 'bg-white dark:bg-charcoal-900 border-[#e7e4dc] dark:border-teal-800/60 hover:border-teal-500/25'
                     }`}
                   >
-                    <div className="flex items-center gap-3.5 min-w-0 pointer-events-none">
-                      <div
-                        className={`w-5 h-5 rounded-lg border transition-all flex items-center justify-center shrink-0 ${
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      {/* Checkbox button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleItem(item);
+                        }}
+                        className={`w-5 h-5 rounded-lg border transition-all flex items-center justify-center shrink-0 cursor-pointer ${
                           item.done
                             ? 'bg-teal-600 border-teal-500 text-charcoal-950'
                             : isOverdue
                               ? 'border-red-400 dark:border-red-700 hover:border-red-500'
                               : 'border-[#c5c3b9] dark:border-[#3f3f46] hover:border-teal-500'
                         }`}
+                        title={item.done ? 'Marcar como não concluído' : 'Marcar como concluído'}
                       >
                         {item.done && <CheckCircle2 className="h-3.5 w-3.5" />}
-                      </div>
+                      </button>
 
-                      <div className="min-w-0 text-left">
+                      <div className="min-w-0 text-left flex-1">
                         <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-wider font-sans">
                           <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-500' : 'text-teal-600 dark:text-white'}`}>
                             <Clock className="h-3 w-3" />
@@ -459,10 +590,28 @@ export const DailyTracker: React.FC = () => {
                             ? 'line-through text-stone-400 dark:text-white font-medium' 
                             : isOverdue
                               ? 'text-red-950 dark:text-red-200'
-                              : 'text-charcoal-800 dark:text-white'
-                        } truncate`}>
+                              : 'text-charcoal-800 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-300'
+                        } truncate transition-colors`}>
                           {item.title}
                         </h4>
+
+                        {/* Tag/Badge de Destino da Referência */}
+                        {ref && (
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[8.5px] font-black uppercase tracking-wider bg-teal-500/10 dark:bg-teal-500/20 text-teal-700 dark:text-cream-300 border border-teal-500/25 group-hover:border-teal-500/50 transition-all"
+                              title={`Clique para ir para ${ref.label}`}
+                            >
+                              {ref.target === 'pacientes' && <User className="w-2.5 h-2.5" />}
+                              {ref.target === 'financeiro' && <DollarSign className="w-2.5 h-2.5" />}
+                              {ref.target === 'notas' && <StickyNote className="w-2.5 h-2.5" />}
+                              {ref.target === 'agenda' && <Calendar className="w-2.5 h-2.5" />}
+                              {ref.target === 'documentos' && <FileText className="w-2.5 h-2.5" />}
+                              <span>{ref.label}</span>
+                              <ArrowUpRight className="w-2.5 h-2.5 opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                            </span>
+                          </div>
+                        )}
 
                         {item.notes && !item.done && (
                           <p className="text-[10px] text-stone-400 dark:text-white italic mt-0.5 font-sans truncate max-w-[280px]">
@@ -570,64 +719,91 @@ export const DailyTracker: React.FC = () => {
                   </div>
 
                   <div className="space-y-2">
-                    {groupedWeekItems[dateKey].map((item) => (
-                      <div
-                        key={item.uid}
-                        onClick={() => handleToggleItem(item)}
-                        className={`border transition-all rounded-xl p-3 flex items-center justify-between shadow-sm cursor-pointer select-none ${
-                          item.done 
-                            ? 'bg-[#faf9f6]/30 dark:bg-charcoal-950/20 border-[#e7e4dc]/70 dark:border-[#131317] opacity-40' 
-                            : item.important
-                              ? 'border-amber-500/35 bg-amber-500/[0.01] dark:bg-amber-500/[0.03]'
-                              : item.type === 'APPT'
-                                ? 'bg-white dark:bg-charcoal-900 border-emerald-500/20 hover:border-emerald-500/30'
-                                : 'bg-white dark:bg-charcoal-900 border-[#e7e4dc] dark:border-teal-800/60 hover:border-teal-500/25'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0 pointer-events-none">
-                          <div
-                            className={`w-5 h-5 rounded border transition-all flex items-center justify-center shrink-0 ${
-                              item.done
-                                ? 'bg-teal-600 border-teal-500 text-charcoal-950'
-                                : 'border-[#c5c3b9] dark:border-[#3f3f46] hover:border-teal-500'
-                            }`}
-                          >
-                            {item.done && <CheckCircle2 className="h-3 w-3" />}
-                          </div>
+                    {groupedWeekItems[dateKey].map((item) => {
+                      const ref = resolveItemReference(item, patientsList);
+                      return (
+                        <div
+                          key={item.uid}
+                          onClick={() => handleItemClick(item)}
+                          className={`border transition-all rounded-xl p-3 flex items-center justify-between shadow-sm cursor-pointer select-none group ${
+                            item.done 
+                              ? 'bg-[#faf9f6]/30 dark:bg-charcoal-950/20 border-[#e7e4dc]/70 dark:border-[#131317] opacity-40' 
+                              : item.important
+                                ? 'border-amber-500/35 bg-amber-500/[0.01] dark:bg-amber-500/[0.03]'
+                                : item.type === 'APPT'
+                                  ? 'bg-white dark:bg-charcoal-900 border-emerald-500/20 hover:border-emerald-500/30'
+                                  : 'bg-white dark:bg-charcoal-900 border-[#e7e4dc] dark:border-teal-800/60 hover:border-teal-500/25'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {/* Checkbox button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleItem(item);
+                              }}
+                              className={`w-5 h-5 rounded border transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+                                item.done
+                                  ? 'bg-teal-600 border-teal-500 text-charcoal-950'
+                                  : 'border-[#c5c3b9] dark:border-[#3f3f46] hover:border-teal-500'
+                              }`}
+                              title={item.done ? 'Marcar como pendente' : 'Marcar como concluído'}
+                            >
+                              {item.done && <CheckCircle2 className="h-3 w-3" />}
+                            </button>
 
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider font-sans">
-                              <span className="text-stone-400 dark:text-white flex items-center gap-1">
-                                <Clock className="h-2.5 w-2.5" />
-                                {item.time}
-                              </span>
-                              {item.type === 'APPT' && (
-                                <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1 py-px rounded text-[6px] font-black uppercase">
-                                  Consulta
+                            <div className="min-w-0 text-left flex-1">
+                              <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider font-sans">
+                                <span className="text-stone-400 dark:text-white flex items-center gap-1">
+                                  <Clock className="h-2.5 w-2.5" />
+                                  {item.time}
                                 </span>
-                              )}
-                              {item.type === 'TASK' && (
-                                <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1 py-px rounded text-[6px] font-black uppercase">
-                                  Tarefa
-                                </span>
-                              )}
-                              {item.important && (
-                                <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1 py-px rounded text-[6px] font-black uppercase flex items-center gap-0.5">
-                                  <Star className="h-2 w-2 fill-current" />
-                                  Importante
-                                </span>
+                                {item.type === 'APPT' && (
+                                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1 py-px rounded text-[6px] font-black uppercase">
+                                    Consulta
+                                  </span>
+                                )}
+                                {item.type === 'TASK' && (
+                                  <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1 py-px rounded text-[6px] font-black uppercase">
+                                    Tarefa
+                                  </span>
+                                )}
+                                {item.important && (
+                                  <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1 py-px rounded text-[6px] font-black uppercase flex items-center gap-0.5">
+                                    <Star className="h-2 w-2 fill-current" />
+                                    Importante
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <h4 className={`text-xs font-bold mt-0.5 font-sans ${
+                                item.done 
+                                  ? 'line-through text-stone-400 dark:text-white font-medium' 
+                                  : 'text-charcoal-800 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-300'
+                              } truncate transition-colors`}>
+                                {item.title}
+                              </h4>
+
+                              {/* Tag/Badge de Destino da Referência */}
+                              {ref && (
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <span
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-teal-500/10 dark:bg-teal-500/20 text-teal-700 dark:text-cream-300 border border-teal-500/25 group-hover:border-teal-500/50 transition-all"
+                                    title={`Clique para ir para ${ref.label}`}
+                                  >
+                                    {ref.target === 'pacientes' && <User className="w-2 h-2" />}
+                                    {ref.target === 'financeiro' && <DollarSign className="w-2 h-2" />}
+                                    {ref.target === 'notas' && <StickyNote className="w-2 h-2" />}
+                                    {ref.target === 'agenda' && <Calendar className="w-2 h-2" />}
+                                    {ref.target === 'documentos' && <FileText className="w-2 h-2" />}
+                                    <span>{ref.label}</span>
+                                    <ArrowUpRight className="w-2 h-2 opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                  </span>
+                                </div>
                               )}
                             </div>
-                            
-                            <h4 className={`text-xs font-bold mt-0.5 font-sans ${
-                              item.done 
-                                ? 'line-through text-stone-400 dark:text-white font-medium' 
-                                : 'text-charcoal-800 dark:text-white'
-                            } truncate`}>
-                              {item.title}
-                            </h4>
                           </div>
-                        </div>
 
                         {item.type === 'TASK' && (
                           <button
@@ -647,7 +823,8 @@ export const DailyTracker: React.FC = () => {
                           </button>
                         )}
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 </div>
               ))
@@ -683,6 +860,33 @@ export const DailyTracker: React.FC = () => {
                   required
                   autoFocus
                 />
+              </div>
+
+              {/* Vínculo / Referência Opcional */}
+              <div className="space-y-1.5 text-left">
+                <label className="block text-[10px] tracking-widest text-stone-400">Vincular a (Opcional)</label>
+                <select
+                  value={linkedEntity}
+                  onChange={(e) => setLinkedEntity(e.target.value)}
+                  className="w-full glass-input rounded-xl py-2.5 px-4 text-charcoal-900 dark:text-white text-xs outline-none font-sans font-medium bg-white dark:bg-[#112424]"
+                >
+                  <option value="">Geral / Sem vínculo específico</option>
+                  {patientsList.length > 0 && (
+                    <optgroup label="Pacientes">
+                      {patientsList.map(p => (
+                        <option key={p.id} value={`patient:${p.id}:${p.name}`}>
+                          👤 Paciente: {p.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="Módulos Clínicos">
+                    <option value="module:financeiro">💰 Módulo Financeiro</option>
+                    <option value="module:notas">📝 Bloco de Notas</option>
+                    <option value="module:agenda">📅 Agenda</option>
+                    <option value="module:documentos">📄 Documentos</option>
+                  </optgroup>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { seedDemoDataIfEmpty } from './mockSeedData';
 
 // Interfaces para os tipos do banco de dados
 export interface ProfessionalConfig {
@@ -102,11 +103,9 @@ const mockDb = {
   }
 };
 
-// Inicializa dados mock caso estejam vazios
+// Inicializa dados mock caso estejam vazios (Ambiente Web / Demo)
 if (!isTauri()) {
-  if (!localStorage.getItem('acaua_config') && !localStorage.getItem('psi_crm_config')) {
-    // Banco vazio simula que o arquivo .db não existe
-  }
+  seedDemoDataIfEmpty();
 }
 
 // Classe de serviço do banco de dados
