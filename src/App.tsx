@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { dbService, isTauri } from './services/db';
+import { dbService, isDemoWeb } from './services/db';
 import type { ProfessionalConfig } from './services/db';
 import { LockScreen } from './components/LockScreen';
 import { Dashboard } from './components/Dashboard';
@@ -144,7 +144,7 @@ function App() {
     setSplashMessage('Inicializando cofre de segurança e chaves AES-256...');
     
     const startTime = Date.now();
-    const duration = isTauri() ? 6000 : 800; // 6s no desktop para sincronizar com motion video, 800ms super rápido na web demo!
+    const duration = isDemoWeb() ? 800 : 6000; // 6s padrão sincronizado ao motion, 800ms apenas na demo pública web
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;

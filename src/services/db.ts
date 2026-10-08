@@ -92,6 +92,14 @@ export const isTauri = () => {
   return typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ !== undefined;
 };
 
+// Verifica se está na versão pública demonstrativa (GitHub Pages)
+export const isDemoWeb = () => {
+  return typeof window !== 'undefined' && (
+    window.location.hostname.includes('github.io') ||
+    window.location.search.includes('demo=true')
+  );
+};
+
 // --- MOCK LOCALSTORAGE DATABASE (Para Web Fallback) ---
 const mockDb = {
   get: (key: string, defaultValue: any) => {
@@ -103,9 +111,23 @@ const mockDb = {
   }
 };
 
-// Inicializa dados mock caso estejam vazios (Ambiente Web / Demo)
+// Inicializa dados mock apenas se estiver explicitamente na versão demo pública (ex: GitHub Pages)
 if (!isTauri()) {
-  seedDemoDataIfEmpty();
+  if (isDemoWeb()) {
+    seedDemoDataIfEmpty();
+  } else if (localStorage.getItem('acaua_demo_seeded_v5')) {
+    // Remove dados fakes que foram gerados no ambiente local durante os testes
+    const demoKeys = [
+      'master_password', 'config', 'patients', 'evolutions', 'attachments', 
+      'clinical_tools', 'appointments', 'finance', 'daily_tasks', 'notes', 
+      'theme', 'tour_done', 'demo_seeded_v1', 'demo_seeded_v2', 'demo_seeded_v3', 
+      'demo_seeded_v4', 'demo_seeded_v5'
+    ];
+    demoKeys.forEach(k => {
+      localStorage.removeItem(`acaua_${k}`);
+      localStorage.removeItem(`psi_crm_${k}`);
+    });
+  }
 }
 
 // Classe de serviço do banco de dados

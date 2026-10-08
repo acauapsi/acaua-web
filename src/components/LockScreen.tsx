@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { dbService, isTauri } from '../services/db';
+import { dbService, isDemoWeb } from '../services/db';
 import { DotField } from './DotField';
 import { AcauaLogo } from './AcauaLogo';
 import { 
@@ -11,7 +11,7 @@ interface LockScreenProps {
 }
 
 export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
-  const [password, setPassword] = useState(!isTauri() ? 'acaua2026' : '');
+  const [password, setPassword] = useState(isDemoWeb() ? 'acaua2026' : '');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isFirstRun, setIsFirstRun] = useState<boolean | null>(null);
   const [dbExists, setDbExists] = useState(false);
@@ -84,7 +84,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
       setTheme(cachedTheme);
       toggleTheme(cachedTheme);
 
-      if (!isTauri()) {
+      if (isDemoWeb()) {
         setPassword('acaua2026');
       }
     };
@@ -646,7 +646,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
                 />
               </div>
 
-              {!isTauri() && (
+              {isDemoWeb() && (
                 <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-3 text-teal-900 dark:text-cream-200 text-left space-y-1">
                   <div className="flex items-center gap-1.5 font-black text-[11px] uppercase tracking-wider text-teal-800 dark:text-cream-300">
                     <Sparkles className="w-3.5 h-3.5 text-teal-500" />
